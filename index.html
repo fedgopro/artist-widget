@@ -91,6 +91,7 @@ async function loadArtists(){
   if(error){
     empty.style.display = "block";
     empty.innerText = "Ошибка загрузки артистов";
+    console.log(error);
     return;
   }
 
@@ -106,7 +107,7 @@ async function loadArtists(){
       <div>
         <a class="card" href="${a.vk_url || '#'}" target="_blank">
           <div class="cover">
-            <img src="${a.image_url || ''}">
+            <img src="${a.image_url || ''}" onerror="this.style.display='none'">
           </div>
           <div class="name">${a.name}</div>
         </a>
@@ -124,6 +125,17 @@ function closeModal(){
   document.getElementById("modal").style.display = "none";
 }
 
+function safeFileName(file){
+  const ext = file.name.split(".").pop().toLowerCase();
+  const allowed = ["jpg","jpeg","png","webp","gif"];
+
+  if(!allowed.includes(ext)){
+    return null;
+  }
+
+  return "artist-" + Date.now() + "-" + Math.random().toString(36).slice(2) + "." + ext;
+}
+
 async function saveArtist(){
   if(!isAdmin){
     alert("Нет доступа");
@@ -139,14 +151,22 @@ async function saveArtist(){
     return;
   }
 
-  const fileName = Date.now() + "-" + file.name.replaceAll(" ","-");
+  const fileName = safeFileName(file);
+
+  if(!fileName){
+    alert("Поддерживаются только JPG, PNG, WEBP или GIF");
+    return;
+  }
 
   const upload = await client.storage
     .from("artists")
-    .upload(fileName, file);
+    .upload(fileName, file, {
+      cacheControl: "3600",
+      upsert: false
+    });
 
   if(upload.error){
-    alert("Ошибка загрузки фото");
+    alert("Ошибка загрузки фото: " + upload.error.message);
     console.log(upload.error);
     return;
   }
@@ -164,7 +184,7 @@ async function saveArtist(){
   });
 
   if(insert.error){
-    alert("Ошибка сохранения артиста");
+    alert("Ошибка сохранения артиста: " + insert.error.message);
     console.log(insert.error);
     return;
   }
@@ -184,7 +204,7 @@ async function deleteArtist(id){
   const {error} = await client.from("artists").delete().eq("id",id);
 
   if(error){
-    alert("Ошибка удаления");
+    alert("Ошибка удаления: " + error.message);
     console.log(error);
     return;
   }
