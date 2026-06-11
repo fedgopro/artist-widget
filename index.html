@@ -1,55 +1,160 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FEDGO Artists</title>
 <style>
-body{
-background:#0f0f12;
-color:white;
-font-family:Arial;
-padding:20px;
-margin:0;
-}
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-gap:20px;
-}
-.card{
-background:#1b1b22;
-border-radius:20px;
-padding:15px;
-text-align:center;
-}
-img{
-width:100%;
-border-radius:15px;
-}
-a{
-display:block;
-margin-top:10px;
-padding:10px;
-background:#2d81ff;
-color:white;
-text-decoration:none;
-border-radius:10px;
-}
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif}
+.wrap{padding:14px}
+.panel{background:#222;border:1px solid #3a3a3a;border-radius:12px;padding:14px;overflow:hidden}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.title{font-size:18px;font-weight:800}
+.settings{background:none;border:0;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.row{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px}
+.card{min-width:135px}
+.cover{height:78px;border-radius:8px;background:#111;border:1px solid #444;overflow:hidden;position:relative;box-shadow:0 0 12px #000}
+.cover img{width:100%;height:100%;object-fit:cover}
+.cover:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.25),rgba(255,0,120,.15))}
+.name{text-align:center;margin-top:8px;font-weight:800;font-size:13px}
+a{color:white;text-decoration:none}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10;padding:20px;overflow:auto}
+.box{max-width:760px;margin:auto;background:#1b1b1f;border:1px solid #444;border-radius:16px;padding:18px}
+input,textarea{width:100%;padding:12px;margin:6px 0 12px;background:#101014;color:#fff;border:1px solid #444;border-radius:10px}
+button{padding:11px 14px;border:0;border-radius:10px;font-weight:800;cursor:pointer}
+.blue{background:#2d81ff;color:white}
+.red{background:#ff3b3b;color:white}
+.gray{background:#333;color:white}
+.artistEdit{border:1px solid #333;border-radius:12px;padding:12px;margin-bottom:12px;background:#141418}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.small{font-size:12px;color:#aaa}
 </style>
 </head>
 <body>
 
-<h1>Артисты FEDGO</h1>
-
-<div class="grid">
-
-<div class="card">
-<img src="https://via.placeholder.com/500x500">
-<h3>FEDGO</h3>
-<a href="https://vk.com/fedgo2017">Слушать</a>
+<div class="wrap">
+  <div class="panel">
+    <div class="top">
+      <div class="title">Артисты</div>
+      <button class="settings" onclick="openSettings()">Настроить</button>
+    </div>
+    <div class="row" id="artists"></div>
+  </div>
 </div>
 
+<div class="modal" id="modal">
+  <div class="box">
+    <h2>Настройка плиток</h2>
+    <p class="small">Фото можно вставить ссылкой или выбрать с компьютера. Выбранные фото сохраняются в браузере.</p>
+
+    <div id="editList"></div>
+
+    <div class="actions">
+      <button class="blue" onclick="addArtist()">+ Добавить артиста</button>
+      <button class="blue" onclick="saveSettings()">Сохранить</button>
+      <button class="gray" onclick="closeSettings()">Закрыть</button>
+      <button class="red" onclick="resetAll()">Сбросить</button>
+    </div>
+  </div>
 </div>
+
+<script>
+let artists = JSON.parse(localStorage.getItem("fedgo_artists")) || [
+  {
+    name:"FEDGO",
+    link:"https://vk.com/fedgo2017",
+    img:"https://via.placeholder.com/600x350/111111/ffffff?text=FEDGO"
+  },
+  {
+    name:"STRCTRE",
+    link:"https://vk.com/",
+    img:"https://via.placeholder.com/600x350/111111/ffffff?text=STRCTRE"
+  },
+  {
+    name:"ПОЛИКАРПОВ",
+    link:"https://vk.com/",
+    img:"https://via.placeholder.com/600x350/111111/ffffff?text=ARTIST"
+  }
+];
+
+function render(){
+  const root=document.getElementById("artists");
+  root.innerHTML="";
+  artists.forEach(a=>{
+    root.innerHTML+=`
+      <a class="card" href="${a.link}" target="_blank">
+        <div class="cover"><img src="${a.img}"></div>
+        <div class="name">${a.name}</div>
+      </a>
+    `;
+  });
+}
+
+function openSettings(){
+  document.getElementById("modal").style.display="block";
+  renderEditor();
+}
+
+function closeSettings(){
+  document.getElementById("modal").style.display="none";
+}
+
+function renderEditor(){
+  const list=document.getElementById("editList");
+  list.innerHTML="";
+  artists.forEach((a,i)=>{
+    list.innerHTML+=`
+      <div class="artistEdit">
+        <b>Плитка ${i+1}</b>
+        <input placeholder="Имя артиста" value="${a.name}" onchange="artists[${i}].name=this.value">
+        <input placeholder="Ссылка на VK / VK Music" value="${a.link}" onchange="artists[${i}].link=this.value">
+        <input placeholder="Ссылка на фото" value="${a.img}" onchange="artists[${i}].img=this.value">
+        <input type="file" accept="image/*" onchange="loadImage(event,${i})">
+        <button class="red" onclick="deleteArtist(${i})">Удалить</button>
+      </div>
+    `;
+  });
+}
+
+function loadImage(e,i){
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(){
+    artists[i].img=reader.result;
+    renderEditor();
+  }
+  reader.readAsDataURL(file);
+}
+
+function addArtist(){
+  artists.push({
+    name:"Новый артист",
+    link:"https://vk.com/",
+    img:"https://via.placeholder.com/600x350/111111/ffffff?text=ARTIST"
+  });
+  renderEditor();
+}
+
+function deleteArtist(i){
+  artists.splice(i,1);
+  renderEditor();
+}
+
+function saveSettings(){
+  localStorage.setItem("fedgo_artists",JSON.stringify(artists));
+  render();
+  closeSettings();
+}
+
+function resetAll(){
+  localStorage.removeItem("fedgo_artists");
+  location.reload();
+}
+
+render();
+</script>
 
 </body>
 </html>
